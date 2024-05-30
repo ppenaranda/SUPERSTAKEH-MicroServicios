@@ -1,56 +1,32 @@
-from .models import Measurement
-from django.shortcuts import render, redirect
+from django.shortcuts import render
+from .forms import MeasurementForm
 from django.contrib import messages
-from django.http import HttpResponse
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.conf import settings
-import requests
-import json
+from .logic.logic_measurement import create_measurement, get_measurements
 
-def check_variable(data):
-    r = requests.get(settings.PATH_VAR, headers={"Accept":"application/json"})
-    variables = r.json()
-    for variable in variables:
-        if data["variable"] == variable["id"]:
-            return True
-    return False
 
-def MeasurementList(request):
-    queryset = Measurement.objects.all()
-    context = list(queryset.values('id', 'variable', 'value', 'unit', 'place', 'dateTime'))
-    return JsonResponse(context, safe=False)
+def measurement_list(request):
+    measurements = get_measurements()
+    context = {
+        'measurement_list': measurements
+    }
+    return render(request, 'Measurement/measurements.html', context)
 
-def MeasurementCreate(request):
+def measurement_create(request):
     if request.method == 'POST':
-        data = request.body.decode('utf-8')
-        data_json = json.loads(data)
-        if check_variable(data_json) == True:
-            measurement = Measurement()
-            measurement.variable = data_json['variable']
-            measurement.value = data_json['value']
-            measurement.unit = data_json['unit']
-            measurement.place = data_json['place']
-            measurement.save()
-            return HttpResponse("successfully created measurement")
+        form = MeasurementForm(request.POST)
+        if form.is_valid():
+            create_measurement(form)
+            messages.add_message(request, messages.SUCCESS, 'Measurement create successful')
+            return HttpResponseRedirect(reverse('measurementCreate'))
         else:
-            return HttpResponse("unsuccessfully created measurement. Variable does not exist")
+            print(form.errors)
+    else:
+        form = MeasurementForm()
 
-def MeasurementsCreate(request):
-    if request.method == 'POST':
-        data = request.body.decode('utf-8')
-        data_json = json.loads(data)
-        measurement_list = []
-        for measurement in data_json:
-                    if check_variable(measurement) == True:
-                        db_measurement = Measurement()
-                        db_measurement.variable = measurement['variable']
-                        db_measurement.value = measurement['value']
-                        db_measurement.unit = measurement['unit']
-                        db_measurement.place = measurement['place']
-                        measurement_list.append(db_measurement)
-                    else:
-                        return HttpResponse("unsuccessfully created measurement. Variable does not exist")
-        
-        Measurement.objects.bulk_create(measurement_list)
-        return HttpResponse("successfully created measurements")
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'Measurement/measurementCreate.html', context)
