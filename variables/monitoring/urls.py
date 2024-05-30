@@ -17,10 +17,16 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.index),
     path('', include('variables.urls')),
+    path('health-check/', views.healthCheck),
+    path('health/', views.health_check, name='health'),
+    path(r'', include('django.contrib.auth.urls')),
+    path(r'', include('social_django.urls')),
 ]
 
 if settings.DEBUG is True:
