@@ -1,21 +1,46 @@
 from .models import Variable
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
+from .forms import VariableForm
+from .logic.variable_logic import get_variables, create_variable, get_variable_by_id
 from django.urls import reverse
 from django.http import JsonResponse
 import json
 
-def VariableList(request):
-    queryset = Variable.objects.all()
-    context = list(queryset.values('id', 'name'))
-    return JsonResponse(context, safe=False)
+#no tiene el auth0
 
-def VariableCreate(request):
+def variable_list(request):
+    variables = get_variables()
+    context = {
+        'variable_list': variables
+    }
+    return render(request, 'Variable/VariablesAdmin.html', context)
+
+def solicitar_tarjeta(request):
+    return render(request, 'Variable/variables.html')
+
+def variable_create(request):
     if request.method == 'POST':
-        data = request.body.decode('utf-8')
-        data_json = json.loads(data)
-        variable = Variable()
-        variable.name = data_json["name"]
-        variable.save()
-        return HttpResponse("successfully created variable")
+        form = VariableForm(request.POST)
+        if form.is_valid():
+            create_variable(form)
+            messages.add_message(request, messages.SUCCESS, 'Successfully created solicitud')
+            return HttpResponseRedirect(reverse('variableCreate'))
+        else:
+            print(form.errors)
+    else:
+        form = VariableForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'Variable/variableCreate.html', context)
+    
+
+def variable_list2(request):
+    variables = get_variables()
+    context = {
+        'variable_list': variables
+    }
+    return render(request, 'Variable/variablesShow.html', context)
